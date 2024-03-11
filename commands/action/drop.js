@@ -6,7 +6,14 @@ const {
 } = require("discord.js");
 const fs = require("fs");
 const { createCanvas, loadImage } = require("canvas");
-const crypto = require("crypto")
+const crypto = require("crypto");
+const {
+    isUserBlacklisted,
+    isGuildBlacklisted,
+} = require("../../blacklistChecker");
+
+// Map to track user cooldowns
+const userCooldowns = new Map();
 
 // Load card data from cards.json
 const cardDatabasePath = "./cards.json";
@@ -17,6 +24,20 @@ module.exports = {
         .setName("drop")
         .setDescription("Drops 3 random cards"),
     async execute(interaction) {
+                if (isGuildBlacklisted(interaction.guild.id)) {
+                    return interaction.reply(
+                        "You are blacklisted from using this bot in this server."
+                    );
+                }
+             else {
+                if (isUserBlacklisted(interaction.user.id)) {
+                    return interaction.reply(
+                        "You are blacklisted from using this bot."
+                    );
+                }
+            }
+        const cooldownDuration = 600000; // 10 minutes in milliseconds
+
         await interaction.deferReply();
 
         const randomCards = await getRandomCards(3);
@@ -48,97 +69,121 @@ module.exports = {
         const out = fs.createWriteStream(combinedImagePath);
         const stream = canvas.createPNGStream();
         stream.pipe(out);
+out.on("finish", async () => {
+    // Create buttons
+    const card1 = new ButtonBuilder()
+        .setCustomId("card1")
+        .setLabel("Card 1")
+        .setStyle(ButtonStyle.Primary);
 
-        const card1 = new ButtonBuilder()
-            .setCustomId("card1")
-            .setLabel("Card 1")
-            .setStyle(ButtonStyle.Primary);
+    const card2 = new ButtonBuilder()
+        .setCustomId("card2")
+        .setLabel("Card 2")
+        .setStyle(ButtonStyle.Primary);
 
-        const card2 = new ButtonBuilder()
-            .setCustomId("card2")
-            .setLabel("Card 2")
-            .setStyle(ButtonStyle.Primary);
+    const card3 = new ButtonBuilder()
+        .setCustomId("card3")
+        .setLabel("Card 3")
+        .setStyle(ButtonStyle.Primary);
 
-        const card3 = new ButtonBuilder()
-            .setCustomId("card3")
-            .setLabel("Card 3")
-            .setStyle(ButtonStyle.Primary);
+    const row = new ActionRowBuilder().addComponents(card1, card2, card3);
 
-        const row = new ActionRowBuilder().addComponents(card1, card2, card3);
+    // Send the initial reply with the combined image and buttons
+    await sendCombinedImage(interaction, combinedImagePath, row);
 
-        out.on("finish", async () => {
-            // Ping the user who triggered the command
-            const userPing = `<@${interaction.user.id}>`;
-            // Send the combined image
-            const response = await interaction.editReply({
-                content: `${userPing} is dropping three cards`,
-                files: [combinedImagePath],
-                components: [row],
+    // Set up a collector to listen for button interactions
+    const collector = interaction.channel.createMessageComponentCollector({
+        filter: (interaction) =>
+            interaction.customId.startsWith("card") &&
+            interaction.user.id === interaction.user.id,
+        time: 60000,
+    });
+
+    collector.on("collect", async (buttonInteraction) => {
+        // Check if user is on cooldown
+        if (userCooldowns.has(buttonInteraction.user.id)) {
+            const timeLeft =
+                cooldownDuration -
+                (Date.now() - userCooldowns.get(buttonInteraction.user.id));
+            return buttonInteraction.reply({
+                content: `You're on cooldown. Please wait ${
+                    timeLeft / 1000
+                } seconds before grabbing another card.`,
+                ephemeral: true,
             });
+        }
 
-            try {
-                const cardSelection = await response.awaitMessageComponent({
-                    time: 60_000,
-                });
-                if (cardSelection.customId === "card1") { 
-                    const code =  crypto.randomBytes(4).toString("hex")
-                    await cardSelection.deferUpdate();
-                    await interaction.client.database
-                        .addNewCard(cardSelection.user.id, randomCards[0],code)
-                        .then(async (result) => {
-                            row.components[0].setDisabled(true);
-                            await cardSelection.editReply({
-                                content: `<@${cardSelection.user.id}> took the **${randomCards[0]}** card ${code}`,
-                                components: [row],
-                            });
-                        })
-                        .catch((error) => {
-                            console.error("Error adding a new card:", error);
-                        });
-                } else if (cardSelection.customId === "card2") {  
-                    const code =  crypto.randomBytes(4).toString("hex")
-                    await cardSelection.deferUpdate();
-                    await interaction.client.database
-                        .addNewCard(cardSelection.user.id, randomCards[1],code)
-                        .then(async (result) => {
-                            row.components[1].setDisabled(true);
-                            await cardSelection.editReply({
-                                content: `<@${cardSelection.user.id}> took the **${randomCards[1]}** card ${code}`,
-                                components: [row],
-                            });
-                        })
-                        .catch((error) => {
-                            console.error("Error adding a new card:", error);
-                        });
-                } else if (cardSelection.customId === "card3") {
-                    const code =  crypto.randomBytes(4).toString("hex")
-                    await cardSelection.deferUpdate();
-                    await interaction.client.database
-                        .addNewCard(cardSelection.user.id, randomCards[2],code)
-                        .then(async (result) => {
-                            row.components[2].setDisabled(true);
-                            await cardSelection.editReply({
-                                content: `<@${cardSelection.user.id}> took the **${randomCards[2]}** card ${code}`,
-                                components: [row],
-                            });
-                        })
-                        .catch((error) => {
-                            console.error("Error adding a new card:", error);
-                        });
-                }
-            } catch (e) {
-                console.error(e);
-                await interaction.editReply({
-                    content:
-                        "cardSelection not received within 1 minute, cancelling",
-                    components: [],
-                });
-            }
-            // Remove the temporary combined image file
-            fs.unlinkSync(combinedImagePath);
+        const selectedCard = buttonInteraction.customId.replace("card", "");
+        const code = crypto.randomBytes(4).toString("hex");
+
+        await buttonInteraction.deferUpdate();
+        await interaction.client.database.addNewCard(
+            buttonInteraction.user.id,
+            randomCards[selectedCard - 1],
+            code
+        );
+
+        row.components[selectedCard - 1].setDisabled(true);
+
+        await buttonInteraction.editReply({
+            content: `<@${buttonInteraction.user.id}> took the **${
+                randomCards[selectedCard - 1]
+            }** card ${code}`,
+            components: [row],
         });
+                        await interaction.client.database.addStats(
+                            buttonInteraction.user.id,
+                            "Cards grabbed",
+                            1
+                        );
+        // Set user cooldown
+        userCooldowns.set(buttonInteraction.user.id, Date.now());
+
+        // Remove the temporary combined image file
+        if (fs.existsSync(combinedImagePath)) {
+            fs.unlinkSync(combinedImagePath);
+        } else {
+            console.error(`File ${combinedImagePath} does not exist.`);
+        }
+    });
+
+    collector.on("end", (collected) => {
+        if (collected.size === 0) {
+            interaction.editReply({
+                content:
+                    "Card selection not received within 1 minute, cancelling",
+                components: [],
+            });
+        }
+    });
+});
     },
 };
+
+async function sendCombinedImage(interaction, combinedImagePath, row) {
+    return new Promise(async (resolve, reject) => {
+        const userPing = `<@${interaction.user.id}>`;
+        const content = `${userPing} is dropping three cards`;
+                        await interaction.client.database.addStats(
+                            interaction.user.id,
+                            "Cards dropped",
+                            3
+                        );
+        // Send the initial reply with the combined image and buttons
+        interaction
+            .editReply({
+                content,
+                files: [combinedImagePath],
+                components: [row],
+            })
+            .then(() => {
+                resolve();
+            })
+            .catch((error) => {
+                reject(error);
+            });
+    });
+}
 
 async function getRandomCards(n) {
     const cardNames = Object.keys(cardDatabase);

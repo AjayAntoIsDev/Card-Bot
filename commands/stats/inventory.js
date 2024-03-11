@@ -1,41 +1,79 @@
 const { SlashCommandBuilder, EmbedBuilder } = require("discord.js");
-
+const {
+    isUserBlacklisted,
+    isGuildBlacklisted,
+} = require("../../blacklistChecker");
+const itemJSON = require("../../items.json"
+)
 module.exports = {
     data: new SlashCommandBuilder()
         .setName("inventory")
-        .setDescription("Displays gems, tickets, and gold"),
+        .setDescription("Displays gems, tickets, and gold")
+        .addUserOption((option) =>
+            option.setName("user").setDescription("The user to view inventory")
+        ),
     async execute(interaction) {
+        if (isGuildBlacklisted(interaction.guild?.id)) {
+            return interaction.reply(
+                "You are blacklisted from using this bot in this server."
+            );
+        }
+
+        if (isUserBlacklisted(interaction.user.id)) {
+            return interaction.reply(
+                "You are blacklisted from using this bot."
+            );
+        }
+
         try {
+                                    const getStarEmojis = (rarity) => {
+                                        const maxStars = 4;
+                                        const filledStars = Math.min(
+                                            rarity,
+                                            maxStars
+                                        );
+                                        const emptyStars = Math.max(
+                                            maxStars - filledStars,
+                                            0
+                                        );
+                                        return (
+                                            "★".repeat(filledStars) +
+                                            "☆".repeat(emptyStars)
+                                        );
+                                    };
             await interaction.deferReply();
 
-            const userData = await interaction.client.database.getUser(
-                interaction.user.id
+            let targetUser =
+                interaction.options.getUser("user") || interaction.user;
+
+            const targetUserData = await interaction.client.database.getUser(
+                targetUser.id
             );
 
-            const embed = new EmbedBuilder().setAuthor({
-                name: "Inventory",
-            });
+            const embed = new EmbedBuilder()
+                .setAuthor({
+                    name: `${targetUser.username}'s Inventory`,
+                })
+                .setColor("#808080");
 
-            if (userData) {
-                const gems = userData.gems || 0;
-                const tickets = userData.tickets || 0;
-                const gold = userData.gold || 0;
+            if (targetUserData) {
+                const inventoryItems = targetUserData.inventory || [];
 
-                const fields = [];
+                if (inventoryItems.length > 0) {
+                    const fields = inventoryItems.map((item) => {
+                        console.log(itemJSON[item.name])
+                        let displayString = `${itemJSON[item.name]["emoji"]} **${
+                            item.amount
+                        }** · \`${item.name}\``;
 
-                if (gems > 0) {
-                    fields.push(`💎 Gems: ${gems}`);
-                }
+                        // Check if the item is a "dust" item
+                        if (item.name.toLowerCase() === "dust") {
+                            displayString += ` (${getStarEmojis(item.rarity)})`;
+                        }
 
-                if (tickets > 0) {
-                    fields.push(`🎟️ Tickets: ${tickets}`);
-                }
+                        return displayString;
+                    });
 
-                if (gold > 0) {
-                    fields.push(`💰 Gold: ${gold}`);
-                }
-
-                if (fields.length > 0) {
                     embed.setDescription(fields.join("\n"));
                     await interaction.editReply({ embeds: [embed] });
                 } else {

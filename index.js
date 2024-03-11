@@ -1,11 +1,21 @@
-const dotenv = require('dotenv');
+const dotenv = require("dotenv");
 const fs = require("node:fs");
 const path = require("node:path");
-const { Client, Events, GatewayIntentBits, Collection } = require("discord.js");
+const { Client, GatewayIntentBits, Collection } = require("discord.js");
+const blacklist = require("./blacklist.json");
 
 dotenv.config();
 
-const client = new Client({ intents: [GatewayIntentBits.Guilds] });
+const client = new Client({
+    intents: [
+        GatewayIntentBits.Guilds,
+        GatewayIntentBits.GuildMessages,
+        GatewayIntentBits.MessageContent,
+        GatewayIntentBits.GuildMembers,
+    ],
+});
+
+
 
 client.commands = new Collection();
 client.cooldowns = new Collection();

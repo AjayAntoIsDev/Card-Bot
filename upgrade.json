@@ -1,0 +1,7 @@
+{
+    "maxRarity": 4,
+    "baseCurrency": 50,
+    "currencyItemName": "Gold",
+    "baseSuccessRate": 80,
+    "successRateDecreasePerRarity": 10
+}

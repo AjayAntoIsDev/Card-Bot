@@ -1,0 +1,215 @@
+hey can you make the upgrade command
+The upgrade command is used to increase the rarity of cards by one star it uses up a certain amount of resource given in upgrade.json but it also has a chance to fail
+
+The command should be /upgrade {card code}
+
+Here is how you should calculate the success rate and currency required:
+* To upgrade a 1 star card it will take 50 of the currency and has 80% chance of succeeding
+* To upgrade a 2 star card it will take 100(so double of previous) of the currency and has 70%(-10% from previous) chance of succeeding
+* Like so the currency will double and the success rate will decrease by 10% for each rarity
+* All the variables for the calculation should be easily adjustable preferably in upgrade.json
+
+The upgrade interface will have multiple steps each on the same message that will be edited to show the next setp
+Here are all the steps:
+1. Conformation step
+2. Upgrading step
+3. Result step
+
+Each step will have to button
+1. Next (The button name should be this 🔨)
+2. Cancel (The button name should be this ❌)
+
+The next button should continue to the next step the cancel button to cancel the entire upgrade command
+
+Here are some general requirements:
+* You are only able to upgrade the card you own(in your collection)
+* The image of the card should be as the thumbnail in all the steps
+
+Now i will explain how each step should look and function:
+Remember the next step will edit the relpy not send a new message for each step
+Conformation Step:
+
+If the card is already at its max rarity(4 stars) it should show the following embed:
+
+--Embed start--
+Color:green
+Title: Card Upgrade
+Description: <@{id of the person who ran the command}>, The card `{the code of upgrading card}` is already at its max rarity.
+--Embed end--
+
+If the card is able to be upgraded (the current rarity of the card should be less than 4 stars) it should show the following embed:
+
+--Embed start--
+Color:default
+Title: Card Upgrade
+Description: <@{id of the person who ran the command}>, upgrading `{the code of upgrading card}` from `{starting rarity in stars}` to `{the rarity the command will upgrade the card to in stars}` has a {chnace of succeeding} chance of succeeding. If the upgrade fails, the card's rarity will not change \n
+
+Attempting the upgrade will cost the following: \n
+```
+{The items needed to upgrade the card}
+```\n
+Use the 🔨 button to upgrade
+--Embed end--
+
+
+The following checks for the conformation step should should only occur after the next button is clicked:
+In case if the uses does not have the resource to upgrade it will show this embed
+--Embed start--
+Color:red
+Title: Card Upgrade
+Description: <@{id of the person who ran the command}>, You dont have the required items to upgrade the card \n
+\n
+**The upgrade was canceled.**
+--Embed end--
+
+Upgrading Step:
+This is the second step it will continue to this step if the card is upgradable and if the user has all the items needed 
+This step will be shown for 4 second
+The embed for this will be:
+
+--Embed start--
+Color:yellow
+Title: Card Upgrade
+Description: Attempting to upgrade `{the card code}`**
+--Embed end--
+
+The buttons will be disabled in this step
+After 4 seconds it will go to the next step
+
+Result step:
+This is the final step. on this step the result of the upgrade process(if it failed to upgrade or successfully upgraded the card) will be calculated according to the succeess rate and the items for the upgrade will be used up(detucted from the inventory) remember the completey remove the items from the inventory if the final amount after detuction reachs zero. It will also detuct the item if the upgrade failed
+
+If the upgrade succeded it will show this emebed:
+--Embed start--
+Color:green
+Title: Card Upgrade
+Description: The upgrade succeded! The card `{the card code}` has been upgraded from `{starting rarity in stars}` to `{upgraded rarity in stars}`**
+--Embed end--
+
+If the upgrade failed it will show this emebed:
+--Embed start--
+Color:red
+Title: Card Upgrade
+Description: The upgrade failed! The card `{the card code}`'s rarity has not been changed**
+--Embed end--
+The buttons will be disabled on this step too
+
+You are allowed to create any functions you need to make this command and fix the grammer in the embeds
+
+I need the full implenmentaion and code for this command 
+The entire code for all of the upgrade command should be in a single file and it should be production ready
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+This is the requirements for the trade command
+The trade command is used to trade items/cards between two users. There are no requirements to trade cards , but to trade items you need a trade license in your inventory(the trade license will not be used up)
+
+This command will automatically expire after 3 minutes
+
+/trade {user} {items/cards you want to trade with separated by ","}
+
+The trade interface will have multiple steps each on the same message that will be edited to show the next step
+Here are all the steps:
+1. Trading step
+2. Upgrading step
+3. Result step
+
+Each step will have to button
+1. ✅ (this is the next button)
+2. ❌ (this is the cancel button)
+
+The next button should continue to the next step and The cancel button should cancel the entire trade command
+
+Here are some general requirements:
+* The trade command is used to trade items/cards between two users
+* There are no requirements to trade cards , but to trade items you need a trade license in your inventory(the trade license will not be used up)
+
+Now i will explain how each step should look and function:
+Remember the next step will edit the reply not send a new message for each step
+Conformation Step:
+<@{user you want to trade with}>, Would you like to trade with <@user who ran the command>?
+--Embed start--
+Color:default
+Title: Trade request
+Description: <@{id of the person to trade with}>, please accept or decline the trade request with <@`{the user if of the person who ran the command}`> to continue. 
+--Embed end--
+
+Trading Step:
+This is the second step it will continue to this step if the user who you want to trade with aka the user in the user argument in the slash command accepts the trade
+
+The message for this will be:
+Type a quantity (if multiple items) followed by name/code to add items or cards. Separate entries with "," to add multiple in a single message.
+--Embed start--
+Color:yellow
+Title: {Name of the user who ran the command}
+Description: ```diff
+- Not Ready - \n
+{items/cards}
+```
+--Embed end--
+
+--Embed start--
+Color:grey
+Title: {Name of the user the trade request is for}
+Description: ```diff
+- Not Ready - \n
+{items/cards}
+```
+--Embed end--
+
+The bot now waits for the users to add thier trade items and lock the trade by clicking the next button
+If a user want to add a item they Type a quantity (if multiple items) followed by name/code to add items or cards. Separate entries with "," to add multiple in a single message.
+example:
+50 Gold, 100 Gems,8c1e3873
+This will update the {items/card} for the respective users embed
+Remember to check if the user has the items and the amount of item
+
+
+
+
+Remember to check if the user has the items and the amount of item
+If a user locks in they cant add any more items
+After they locked in - Not Ready - should change to + Locked + in thier respective embed
+They can click the next button again to unlock
+
+After both the users locked the trade will initiate and the message will be edited to "Trade has be accepted" while keeping the embeds
+
+You are allowed to create any functions you need to make this command and fix the grammer in the embeds
+
+I need the full implenmentaion and all the logic for this command 
+The entire code for all of the trade command should be in a single file and it should be production ready

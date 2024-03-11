@@ -1,0 +1,12 @@
+{
+    "Trade License": {
+        "Description":"Testing",
+        "Price": 1000,
+        "CurrencyItem": "Gold"
+    },
+    "Test": {
+        "Description":"Testing",
+        "Price": 5,
+        "CurrencyItem": "Gems"
+    }
+}

@@ -4,6 +4,7 @@ const {
     AttachmentBuilder,
 } = require("discord.js");
 const fs = require("fs");
+const { isUserBlacklisted, isGuildBlacklisted } = require('../../blacklistChecker');
 
 // Load the cards.json file
 const cardPaths = JSON.parse(fs.readFileSync("cards.json", "utf-8"));
@@ -18,6 +19,18 @@ module.exports = {
                 .setRequired(true)
         ),
     async execute(interaction) {
+                if (isGuildBlacklisted(interaction.guild.id)) {
+                    return interaction.reply(
+                        "You are blacklisted from using this bot in this server."
+                    );
+                }
+            else {
+                if (isUserBlacklisted(interaction.user.id)) {
+                    return interaction.reply(
+                        "You are blacklisted from using this bot."
+                    );
+                }
+            }
         try {
             await interaction.deferReply();
 
@@ -52,7 +65,8 @@ module.exports = {
                         `attachment://${cardDetails.name
                             .toLowerCase()
                             .replace(/ /g, "-")}.png`
-                    ); // Use the attachment name
+                    )
+                    .setColor("#808080"); // Use the attachment name
 
                 // Send the embed with the image attachment
                 await interaction.editReply({

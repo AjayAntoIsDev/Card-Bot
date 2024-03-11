@@ -1,0 +1,10 @@
+{
+    "Gold": { "emoji": "💰" },
+    "Gems": { "emoji": "💎" },
+    "Tickets": { "emoji": "🎟️" },
+    "Trade License": { "emoji": "📜" },
+    "Test": { "emoji": "🧪" },
+    "Dust": {
+        "emoji": "✨"
+    }
+}

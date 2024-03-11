@@ -1,1 +1,3 @@
 /.VSCodeCounter/*
+/node_modules
+/.testenv
