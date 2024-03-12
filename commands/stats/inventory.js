@@ -1,10 +1,7 @@
 const { SlashCommandBuilder, EmbedBuilder } = require("discord.js");
-const {
-    isUserBlacklisted,
-    isGuildBlacklisted,
-} = require("../../blacklistChecker");
-const itemJSON = require("../../items.json"
-)
+const { isUserBlacklisted, isGuildBlacklisted } = require("../../blacklistChecker");
+const itemJSON = require("../../items.json");
+
 module.exports = {
     data: new SlashCommandBuilder()
         .setName("inventory")
@@ -26,21 +23,13 @@ module.exports = {
         }
 
         try {
-                                    const getStarEmojis = (rarity) => {
-                                        const maxStars = 4;
-                                        const filledStars = Math.min(
-                                            rarity,
-                                            maxStars
-                                        );
-                                        const emptyStars = Math.max(
-                                            maxStars - filledStars,
-                                            0
-                                        );
-                                        return (
-                                            "★".repeat(filledStars) +
-                                            "☆".repeat(emptyStars)
-                                        );
-                                    };
+            const getStarEmojis = (rarity) => {
+                const maxStars = 4;
+                const filledStars = Math.min(rarity, maxStars);
+                const emptyStars = Math.max(maxStars - filledStars, 0);
+                return "★".repeat(filledStars) + "☆".repeat(emptyStars);
+            };
+
             await interaction.deferReply();
 
             let targetUser =
@@ -61,10 +50,7 @@ module.exports = {
 
                 if (inventoryItems.length > 0) {
                     const fields = inventoryItems.map((item) => {
-                        console.log(itemJSON[item.name])
-                        let displayString = `${itemJSON[item.name]["emoji"]} **${
-                            item.amount
-                        }** · \`${item.name}\``;
+                        let displayString = `${itemJSON[item.name]["emoji"]} **${item.amount.toLocaleString()}** · \`${item.name}\``;
 
                         // Check if the item is a "dust" item
                         if (item.name.toLowerCase() === "dust") {
@@ -92,3 +78,4 @@ module.exports = {
         }
     },
 };
+
