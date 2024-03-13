@@ -20,23 +20,23 @@ const cardDatabasePath = "./cards.json";
 const cardDatabase = JSON.parse(fs.readFileSync(cardDatabasePath, "utf-8"));
 
 module.exports = {
+    cooldown: 600,
     data: new SlashCommandBuilder()
         .setName("drop")
         .setDescription("Drops 3 random cards"),
     async execute(interaction) {
-                if (isGuildBlacklisted(interaction.guild.id)) {
-                    return interaction.reply(
-                        "You are blacklisted from using this bot in this server."
-                    );
-                }
-             else {
-                if (isUserBlacklisted(interaction.user.id)) {
-                    return interaction.reply(
-                        "You are blacklisted from using this bot."
-                    );
-                }
+        if (isGuildBlacklisted(interaction.guild.id)) {
+            return interaction.reply(
+                "You are blacklisted from using this bot in this server."
+            );
+        } else {
+            if (isUserBlacklisted(interaction.user.id)) {
+                return interaction.reply(
+                    "You are blacklisted from using this bot."
+                );
             }
-        const cooldownDuration = 600000; // 10 minutes in milliseconds
+        }
+        const cooldownDuration =  600000 ; // 10 minutes in milliseconds
 
         await interaction.deferReply();
 
@@ -69,94 +69,98 @@ module.exports = {
         const out = fs.createWriteStream(combinedImagePath);
         const stream = canvas.createPNGStream();
         stream.pipe(out);
-out.on("finish", async () => {
-    // Create buttons
-    const card1 = new ButtonBuilder()
-        .setCustomId("card1")
-        .setLabel("Card 1")
-        .setStyle(ButtonStyle.Primary);
+        out.on("finish", async () => {
+            // Create buttons
+            const card1 = new ButtonBuilder()
+                .setCustomId("card1")
+                .setLabel("Card 1")
+                .setStyle(ButtonStyle.Primary);
 
-    const card2 = new ButtonBuilder()
-        .setCustomId("card2")
-        .setLabel("Card 2")
-        .setStyle(ButtonStyle.Primary);
+            const card2 = new ButtonBuilder()
+                .setCustomId("card2")
+                .setLabel("Card 2")
+                .setStyle(ButtonStyle.Primary);
 
-    const card3 = new ButtonBuilder()
-        .setCustomId("card3")
-        .setLabel("Card 3")
-        .setStyle(ButtonStyle.Primary);
+            const card3 = new ButtonBuilder()
+                .setCustomId("card3")
+                .setLabel("Card 3")
+                .setStyle(ButtonStyle.Primary);
 
-    const row = new ActionRowBuilder().addComponents(card1, card2, card3);
+            const row = new ActionRowBuilder().addComponents(card1, card2, card3);
 
-    // Send the initial reply with the combined image and buttons
-    await sendCombinedImage(interaction, combinedImagePath, row);
+            // Send the initial reply with the combined image and buttons
+            await sendCombinedImage(interaction, combinedImagePath, row);
 
-    // Set up a collector to listen for button interactions
-    const collector = interaction.channel.createMessageComponentCollector({
-        filter: (interaction) =>
-            interaction.customId.startsWith("card") &&
-            interaction.user.id === interaction.user.id,
-        time: 60000,
-    });
+            // Set up a collector to listen for button interactions
+            const collector = interaction.channel.createMessageComponentCollector({
+                filter: (interaction) =>
+                    interaction.customId.startsWith("card") &&
+                    interaction.user.id === interaction.user.id,
+                time: 60000,
+            });
 
-    collector.on("collect", async (buttonInteraction) => {
-        // Check if user is on cooldown
-        if (userCooldowns.has(buttonInteraction.user.id)) {
-            const timeLeft =
-                cooldownDuration -
-                (Date.now() - userCooldowns.get(buttonInteraction.user.id));
-            return buttonInteraction.reply({
-                content: `You're on cooldown. Please wait ${
+            collector.on("collect", async (buttonInteraction) => {
+                // Check if user is on cooldown
+                if (userCooldowns.has(buttonInteraction.user.id)) {
+                    const timeLeft =
+                        cooldownDuration -
+                        (Date.now() - userCooldowns.get(buttonInteraction.user.id));
+                    if ((timeLeft / 1000) > 0) {
+                        return buttonInteraction.reply({
+                            content: `You're on cooldown. Please wait ${
                     timeLeft / 1000
                 } seconds before grabbing another card.`,
-                ephemeral: true,
-            });
-        }
+                            ephemeral: true,
+                        });
+                    } else{
+                    delete userCooldowns[buttonInteraction.user.id];
+                    }
 
-        const selectedCard = buttonInteraction.customId.replace("card", "");
-        const code = crypto.randomBytes(4).toString("hex");
+                }
 
-        await buttonInteraction.deferUpdate();
-        await interaction.client.database.addNewCard(
-            buttonInteraction.user.id,
-            randomCards[selectedCard - 1],
-            code
-        );
+                const selectedCard = buttonInteraction.customId.replace("card", "");
+                const code = crypto.randomBytes(4).toString("hex");
 
-        row.components[selectedCard - 1].setDisabled(true);
+                await buttonInteraction.deferUpdate();
+                await interaction.client.database.addNewCard(
+                    buttonInteraction.user.id,
+                    randomCards[selectedCard - 1],
+                    code
+                );
 
-        await buttonInteraction.editReply({
-            content: `<@${buttonInteraction.user.id}> took the **${
+                row.components[selectedCard - 1].setDisabled(true);
+
+                await buttonInteraction.editReply({
+                    content: `<@${buttonInteraction.user.id}> took the **${
                 randomCards[selectedCard - 1]
             }** card ${code}`,
-            components: [row],
-        });
-                        await interaction.client.database.addStats(
-                            buttonInteraction.user.id,
-                            "Cards grabbed",
-                            1
-                        );
-        // Set user cooldown
-        userCooldowns.set(buttonInteraction.user.id, Date.now());
+                    components: [row],
+                });
+                await interaction.client.database.addStats(
+                    buttonInteraction.user.id,
+                    "Cards grabbed",
+                    1
+                );
+                // Set user cooldown
+                userCooldowns.set(buttonInteraction.user.id, Date.now());
 
-        // Remove the temporary combined image file
-        if (fs.existsSync(combinedImagePath)) {
-            fs.unlinkSync(combinedImagePath);
-        } else {
-            console.error(`File ${combinedImagePath} does not exist.`);
-        }
-    });
-
-    collector.on("end", (collected) => {
-        if (collected.size === 0) {
-            interaction.editReply({
-                content:
-                    "Card selection not received within 1 minute, cancelling",
-                components: [],
+                // Remove the temporary combined image file
+                if (fs.existsSync(combinedImagePath)) {
+                    fs.unlinkSync(combinedImagePath);
+                } else {
+                    console.error(`File ${combinedImagePath} does not exist.`);
+                }
             });
-        }
-    });
-});
+
+            collector.on("end", (collected) => {
+                if (collected.size === 0) {
+                    interaction.editReply({
+                        content: "Card selection not received within 1 minute, cancelling",
+                        components: [],
+                    });
+                }
+            });
+        });
     },
 };
 
@@ -164,11 +168,11 @@ async function sendCombinedImage(interaction, combinedImagePath, row) {
     return new Promise(async (resolve, reject) => {
         const userPing = `<@${interaction.user.id}>`;
         const content = `${userPing} is dropping three cards`;
-                        await interaction.client.database.addStats(
-                            interaction.user.id,
-                            "Cards dropped",
-                            3
-                        );
+        await interaction.client.database.addStats(
+            interaction.user.id,
+            "Cards dropped",
+            3
+        );
         // Send the initial reply with the combined image and buttons
         interaction
             .editReply({

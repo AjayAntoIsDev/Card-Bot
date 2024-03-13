@@ -184,31 +184,31 @@ class Database {
         }
     }
 
-    async checkTradeLicense(clientId){
-                try {
-                    const user = await User.findOne({ clientId: clientId });
+    async checkTradeLicense(clientId) {
+        try {
+            const user = await User.findOne({ clientId: clientId });
 
-                    if (!user) {
-                        await this.createEmptyUserIfExists(clientId);
-                        user = await User.findOne({ clientId: clientId });
-                    }
+            if (!user) {
+                await this.createEmptyUserIfExists(clientId);
+                user = await User.findOne({ clientId: clientId });
+            }
 
-                    // Check if the item exists in items.json
+            // Check if the item exists in items.json
 
-                    // Add the item to the user's inventory or update the amount if it already exists
-                    let hasLicense = user.inventory.find(
-                        (item) => item.name === "Trade License"
-                    );
-                    if (hasLicense) {
-                        return true;
-                    } else{
-                        return false;
-                    }
+            // Add the item to the user's inventory or update the amount if it already exists
+            let hasLicense = user.inventory.find(
+                (item) => item.name === "Trade License"
+            );
+            if (hasLicense) {
+                return true;
+            } else {
+                return false;
+            }
 
-                    // Save the user document
-                } catch (error) {
-                    console.error(error);
-                }
+            // Save the user document
+        } catch (error) {
+            console.error(error);
+        }
     }
     async deductItemsForUpgrade(clientId, items) {
         try {
@@ -312,8 +312,7 @@ class Database {
                 // Users don't have the required cards
                 return {
                     success: false,
-                    message:
-                        "Trade canceled. Users do not have the required cards.",
+                    message: "Trade canceled. Users do not have the required cards.",
                 };
             }
         } catch (error) {
@@ -324,7 +323,6 @@ class Database {
             };
         }
     }
-
     async transferCards(sourceClientId, destinationClientId, cards) {
         try {
             const sourceUser = await User.findOne({ clientId: sourceClientId });
@@ -341,6 +339,8 @@ class Database {
                 // Add cards to the destination user
                 destinationUser.cardsCollection.push(...cards);
 
+                // update card ownership
+                await Card.updateMany({ code: { $in: cards } }, { owner: destinationUser.clientId });
                 // Save changes to the database
                 await sourceUser.save();
                 await destinationUser.save();
@@ -350,6 +350,25 @@ class Database {
         }
     }
 
+    async changeCardCode(cardId, newCode) {
+        try {
+            const card = await Card.findById(cardId);
+
+            if (card) {
+                // Update the code field
+                card.code = newCode;
+
+                // Save the updated card
+                await card.save();
+
+                console.log(`Code of card with ID ${cardId} updated to ${newCode}`);
+            } else {
+                console.log(`Card with ID ${cardId} not found.`);
+            }
+        } catch (error) {
+            console.error("Error changing card code:", error.message);
+        }
+    }
     // ... (Existing functions)
 
     async userHasAllCards(clientId, cardList) {

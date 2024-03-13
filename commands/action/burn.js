@@ -17,9 +17,9 @@ module.exports = {
         .setDescription("Burn a card and receive dust")
         .addStringOption((option) =>
             option
-                .setName("card")
-                .setDescription("The code of the card to burn")
-                .setRequired(true)
+            .setName("card")
+            .setDescription("The code of the card to burn")
+            .setRequired(true)
         ),
     async execute(interaction) {
         try {
@@ -61,8 +61,8 @@ module.exports = {
             const dustAmount = 1; // You can customize this logic based on your requirements
             const cardDetails =
                 await interaction.client.database.getCardDetails(cardCode);
-                                const imageURL = cardPaths[cardDetails.name];
- const imageAttachment = new AttachmentBuilder(imageURL);
+            const imageURL = cardPaths[cardDetails.name];
+            const imageAttachment = new AttachmentBuilder(imageURL);
             // Create an embed with burn details
             const burnDetailsEmbed = new EmbedBuilder()
                 .setTitle("Burn Card")
@@ -103,8 +103,7 @@ module.exports = {
             });
 
             // Set up a collector for button interactions
-            const filter = (component) =>
-                ["confirm-burn", "cancel-burn"].includes(component.customId);
+            const filter = (component) => ["confirm-burn", "cancel-burn"].includes(component.customId);
             const collector =
                 interaction.channel.createMessageComponentCollector({
                     filter,
@@ -118,6 +117,24 @@ module.exports = {
                     // Remove the burned card from the user's collection
                     user.cardsCollection.splice(cardIndex, 1);
 
+                    // Remove card for db
+                    try {
+                        const card = burnedCard;
+
+                        if (card) {
+                            // Update the code field
+                            card.code = `${Math.floor(1e99 + Math.random() * 9e99).toString()}`;
+
+                            // Save the updated card
+                            await card.save();
+
+                            console.log(`Code of card with ID updated to ${newCode}`);
+                        } else {
+                            console.log('Card with ID not found.');
+                        }
+                    } catch (error) {
+                        console.error("Error changing card code:", error.message);
+                    }
                     // Find existing dust in the user's inventory
                     const existingDust = user.inventory.find(
                         (item) => item.name === "Dust" && item.rarity === rarity

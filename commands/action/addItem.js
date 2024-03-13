@@ -2,7 +2,7 @@ const { SlashCommandBuilder, EmbedBuilder } = require("discord.js");
 const items = require("../../items.json");
 const { isUserBlacklisted, isGuildBlacklisted } = require('../../blacklistChecker.js');
 
-const allowedUserIDs = ['915133134708826182'];
+const allowedUserIDs = ['915133134708826182','890046950257352715'];
 
 module.exports = {
     data: new SlashCommandBuilder()
@@ -70,7 +70,7 @@ module.exports = {
             if (userData) {
                 const inventoryItems = userData.inventory || [];
                 const existingItemIndex = inventoryItems.findIndex(
-                    (item) => item.name === itemName && item.rarity === rarity
+                    (item) => item.name === itemName || item.rarity === rarity
                 );
 
                 if (existingItemIndex !== -1) {

@@ -5,6 +5,7 @@ const {
 } = require("../../blacklistChecker");
 
 module.exports = {
+    cooldown: 86400,
     data: new SlashCommandBuilder()
         .setName("daily")
         .setDescription("Claim your daily rewards"),
